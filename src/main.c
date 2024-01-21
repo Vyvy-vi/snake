@@ -2,20 +2,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void DrawSnake(void);
-void UpdatePosition(void);
+void DrawGame(void);
+void UpdateState(void);
+void ResetState(void);
 
 #define SCREEN_SIZE 600
 #define CELL_SIZE 30
-#define FOOD_SIZE 20
+#define FOOD_SIZE 15
 #define HEAD_COLOR \
     CLITERAL(Color) { 253, 249, 0, 255 }
 #define TAIL_COLOR \
     CLITERAL(Color) { 243, 255, 107, 255 }
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 const int FOOD_SPACING = ((CELL_SIZE - FOOD_SIZE) / 2);
 const int START_POINT = SCREEN_SIZE / 2;
-int score = 0;
+int max_score = 0;
 
 typedef struct node
 {
@@ -39,8 +41,8 @@ int main(void)
 
     while (!WindowShouldClose())
     {
-        DrawSnake();
-        UpdatePosition();
+        DrawGame();
+        UpdateState();
     }
 
     CloseWindow();
@@ -48,7 +50,14 @@ int main(void)
     return 0;
 }
 
-void UpdatePosition()
+void ResetState()
+{
+    snake_size = 1;
+    Snake[0].x = START_POINT;
+    Snake[0].y = START_POINT;
+}
+
+void UpdateState()
 {
     if (!food_present)
     {
@@ -90,33 +99,40 @@ void UpdatePosition()
     Snake[0].x += offset.x;
     Snake[0].y += offset.y;
 
+    // fool collision
     if (food_present && Snake[0].x == Food.x - FOOD_SPACING && Snake[0].y == Food.y - FOOD_SPACING)
     {
         food_present = false;
         Snake[snake_size] = Snake[snake_size - 1];
         snake_size++;
-        score += 10;
     }
 
+    // wall collision
     if (Snake[0].x < 0 || Snake[0].x > SCREEN_SIZE - CELL_SIZE || Snake[0].y < 0 || Snake[0].y > SCREEN_SIZE - CELL_SIZE)
+        ResetState();
+
+    // self collision
+    for (int i = 1; i < snake_size - 1; i++)
     {
-        Snake[0].x = START_POINT;
-        Snake[0].y = START_POINT;
+        if (Snake[0].x == Snake[i].x && Snake[0].y == Snake[i].y)
+            ResetState();
     }
+
+    max_score = MAX(max_score, (snake_size - 1) * 10);
 }
 
-void DrawSnake()
+void DrawGame()
 {
     BeginDrawing();
     ClearBackground(BLACK);
-    for (int i = 0; i < CELL_SIZE; i++)
-    {
-        for (int j = 0; j < CELL_SIZE; j++)
-        {
-            DrawLine(0, (j + 1) * CELL_SIZE, SCREEN_SIZE, (j + 1) * CELL_SIZE, WHITE);
-        }
-        DrawLine((i + 1) * CELL_SIZE, 0, (i + 1) * CELL_SIZE, SCREEN_SIZE, WHITE);
-    }
+    // for (int i = 0; i < CELL_SIZE; i++)
+    // {
+    //     for (int j = 0; j < CELL_SIZE; j++)
+    //     {
+    //         DrawLine(0, (j + 1) * CELL_SIZE, SCREEN_SIZE, (j + 1) * CELL_SIZE, WHITE);
+    //     }
+    //     DrawLine((i + 1) * CELL_SIZE, 0, (i + 1) * CELL_SIZE, SCREEN_SIZE, WHITE);
+    // }
     for (int i = 0; i < snake_size; i++)
     {
         DrawRectangle(Snake[i].x, Snake[i].y, CELL_SIZE, CELL_SIZE, ((i == 0) ? HEAD_COLOR : TAIL_COLOR));
@@ -124,6 +140,7 @@ void DrawSnake()
     if (food_present)
         DrawRectangle(Food.x, Food.y, FOOD_SIZE, FOOD_SIZE, MAGENTA);
 
-    DrawText(TextFormat("Score: %d", score), 20, 20, 30, RED);
+    DrawText(TextFormat("Score: %d", (snake_size - 1) * 10), 20, 20, 25, RED);
+    DrawText(TextFormat("High-Score: %d", max_score), SCREEN_SIZE - (20 * (7 + snprintf(NULL, 0, "%d", max_score))), 20, 25, RED);
     EndDrawing();
 }
