@@ -5,6 +5,9 @@
 void DrawGame(void);
 void UpdateState(void);
 void ResetState(void);
+void _DrawGrid(void);
+void _ReadMaxScore(void);
+void _WriteScore(long);
 
 #define SCREEN_SIZE 600
 #define CELL_SIZE 30
@@ -14,10 +17,12 @@ void ResetState(void);
 #define TAIL_COLOR \
     CLITERAL(Color) { 243, 255, 107, 255 }
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+#define GRID 0
+#define FOOD_COLOR MAGENTA
 
 const int FOOD_SPACING = ((CELL_SIZE - FOOD_SIZE) / 2);
 const int START_POINT = SCREEN_SIZE / 2;
-int max_score = 0;
+long max_score = 0;
 
 typedef struct node
 {
@@ -34,6 +39,7 @@ node offset = {0, 0};
 
 int main(void)
 {
+    _ReadMaxScore();
     InitWindow(SCREEN_SIZE, SCREEN_SIZE, "Snake");
     Snake[0].x = START_POINT;
     Snake[0].y = START_POINT;
@@ -52,6 +58,7 @@ int main(void)
 
 void ResetState()
 {
+    _WriteScore((snake_size - 1) * 10);
     snake_size = 1;
     Snake[0].x = START_POINT;
     Snake[0].y = START_POINT;
@@ -99,7 +106,7 @@ void UpdateState()
     Snake[0].x += offset.x;
     Snake[0].y += offset.y;
 
-    // fool collision
+    // food collision
     if (food_present && Snake[0].x == Food.x - FOOD_SPACING && Snake[0].y == Food.y - FOOD_SPACING)
     {
         food_present = false;
@@ -125,22 +132,54 @@ void DrawGame()
 {
     BeginDrawing();
     ClearBackground(BLACK);
-    // for (int i = 0; i < CELL_SIZE; i++)
-    // {
-    //     for (int j = 0; j < CELL_SIZE; j++)
-    //     {
-    //         DrawLine(0, (j + 1) * CELL_SIZE, SCREEN_SIZE, (j + 1) * CELL_SIZE, WHITE);
-    //     }
-    //     DrawLine((i + 1) * CELL_SIZE, 0, (i + 1) * CELL_SIZE, SCREEN_SIZE, WHITE);
-    // }
+
+    if (GRID)
+        _DrawGrid();
+
     for (int i = 0; i < snake_size; i++)
     {
         DrawRectangle(Snake[i].x, Snake[i].y, CELL_SIZE, CELL_SIZE, ((i == 0) ? HEAD_COLOR : TAIL_COLOR));
     }
     if (food_present)
-        DrawRectangle(Food.x, Food.y, FOOD_SIZE, FOOD_SIZE, MAGENTA);
+        DrawRectangle(Food.x, Food.y, FOOD_SIZE, FOOD_SIZE, FOOD_COLOR);
 
     DrawText(TextFormat("Score: %d", (snake_size - 1) * 10), 20, 20, 25, RED);
-    DrawText(TextFormat("High-Score: %d", max_score), SCREEN_SIZE - (20 * (7 + snprintf(NULL, 0, "%d", max_score))), 20, 25, RED);
+    DrawText(TextFormat("High-Score: %d", max_score), SCREEN_SIZE - (22 * (7 + snprintf(NULL, 0, "%ld", max_score))), 20, 25, RED);
     EndDrawing();
+}
+
+void _DrawGrid()
+{
+    for (int i = 0; i < CELL_SIZE; i++)
+    {
+        for (int j = 0; j < CELL_SIZE; j++)
+        {
+            DrawLine(0, (j + 1) * CELL_SIZE, SCREEN_SIZE, (j + 1) * CELL_SIZE, WHITE);
+        }
+        DrawLine((i + 1) * CELL_SIZE, 0, (i + 1) * CELL_SIZE, SCREEN_SIZE, WHITE);
+    }
+}
+
+void _ReadMaxScore()
+{
+    FILE *file = fopen("build/scores.txt", "r");
+    if (file == NULL)
+        return;
+
+    int num;
+    while (fscanf(file, "%d", &num) > 0)
+    {
+        if (num > max_score)
+            max_score = num;
+    }
+    fclose(file);
+}
+
+void _WriteScore(long score)
+{
+    FILE *file = fopen("build/scores.txt", "a");
+    if (file == NULL)
+        return;
+    fprintf(file, "\n%d", score);
+    fclose(file);
 }
