@@ -22,7 +22,7 @@ void _WriteScore(long);
 
 const int FOOD_SPACING = ((CELL_SIZE - FOOD_SIZE) / 2);
 const int START_POINT = SCREEN_SIZE / 2;
-long max_score = 0;
+long max_score;
 
 typedef struct node
 {
@@ -31,18 +31,16 @@ typedef struct node
 } node;
 
 node Snake[(SCREEN_SIZE * SCREEN_SIZE) / (CELL_SIZE * CELL_SIZE)];
-int snake_size = 1;
-bool food_present = false;
+int snake_size;
+bool food_present;
 node Food;
-
-node offset = {0, 0};
+node offset;
 
 int main(void)
 {
     _ReadMaxScore();
     InitWindow(SCREEN_SIZE, SCREEN_SIZE, "Snake");
-    Snake[0].x = START_POINT;
-    Snake[0].y = START_POINT;
+    ResetState();
     SetTargetFPS(8);
 
     while (!WindowShouldClose())
@@ -62,6 +60,9 @@ void ResetState()
     snake_size = 1;
     Snake[0].x = START_POINT;
     Snake[0].y = START_POINT;
+    offset.x = 0;
+    offset.y = 0;
+    food_present = false;
 }
 
 void UpdateState()
@@ -180,6 +181,6 @@ void _WriteScore(long score)
     FILE *file = fopen("build/scores.txt", "a");
     if (file == NULL)
         return;
-    fprintf(file, "\n%d", score);
+    fprintf(file, "\n%ld", score);
     fclose(file);
 }
