@@ -38,5 +38,10 @@ $(TARGET): $(OBJS)
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
 
+web: $(BUILD_DIR)
+	sed -i'' -e 's/#define PLATFORM_WEB 1/\/\/#define PLATFORM_WEB 1/' $(SRC_DIR)/main.c
+	emcc -o ./index.html $(SRC_DIR)/main.c -Os -Wall ../raylib/src/libraylib.a -I. -I../raylib/src/ -L. -L../raylib/src/librarylib.a -s USE_GLFW=3  -DPLATFORM_WEB
+	sed -i'' -e 's/\/\/#define PLATFORM_WEB 1/#define PLATFORM_WEB 1/' $(SRC_DIR)/main.c
+
 # Phony targets
-.PHONY: all clean
+.PHONY: all clean web

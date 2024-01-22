@@ -2,27 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void DrawGame(void);
-void UpdateState(void);
-void ResetState(void);
-void _DrawGrid(void);
-void _ReadMaxScore(void);
-void _WriteScore(long);
-
-#define SCREEN_SIZE 600
-#define CELL_SIZE 30
-#define FOOD_SIZE 15
-#define HEAD_COLOR \
-    CLITERAL(Color) { 253, 249, 0, 255 }
-#define TAIL_COLOR \
-    CLITERAL(Color) { 243, 255, 107, 255 }
-#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
-#define GRID 0
-#define FOOD_COLOR MAGENTA
-
-const int FOOD_SPACING = ((CELL_SIZE - FOOD_SIZE) / 2);
-const int START_POINT = SCREEN_SIZE / 2;
-long max_score;
+//////#define PLATFORM_WEB 1
+#if defined(PLATFORM_WEB)
+    #include <emscripten/emscripten.h>
+#endif
 
 typedef struct node
 {
@@ -30,33 +13,39 @@ typedef struct node
     int y;
 } node;
 
+#define SCREEN_SIZE 600
+#define CELL_SIZE 30
+#define FOOD_SIZE 15
+
+#define HEAD_COLOR CLITERAL(Color) { 253, 249, 0, 255 }
+#define TAIL_COLOR CLITERAL(Color) { 243, 255, 107, 255 }
+#define FOOD_COLOR MAGENTA
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
+#define GRID 0
+const int FOOD_SPACING = ((CELL_SIZE - FOOD_SIZE) / 2);
+const int START_POINT = SCREEN_SIZE / 2;
+
+long max_score = 0;
 node Snake[(SCREEN_SIZE * SCREEN_SIZE) / (CELL_SIZE * CELL_SIZE)];
 int snake_size;
 bool food_present;
 node Food;
 node offset;
 
-int main(void)
-{
-    _ReadMaxScore();
-    InitWindow(SCREEN_SIZE, SCREEN_SIZE, "Snake");
-    ResetState();
-    SetTargetFPS(8);
-
-    while (!WindowShouldClose())
-    {
-        DrawGame();
-        UpdateState();
-    }
-
-    CloseWindow();
-
-    return 0;
-}
+void UpdateDrawFrame(void);
+void ResetState(void);
+void _ReadMaxScore(void);
+void _WriteScore(long);
+void _DrawGrid(void);
 
 void ResetState()
 {
-    _WriteScore((snake_size - 1) * 10);
+
+    #if !defined(PLATFORM_WEB) 
+      _WriteScore((snake_size - 1) * 10);
+    #endif
+    
     snake_size = 1;
     Snake[0].x = START_POINT;
     Snake[0].y = START_POINT;
@@ -65,7 +54,27 @@ void ResetState()
     food_present = false;
 }
 
-void UpdateState()
+int main(void)
+{
+    ResetState();
+    InitWindow(SCREEN_SIZE, SCREEN_SIZE, "Snake");
+    #if defined(PLATFORM_WEB)
+      emscripten_set_main_loop(UpdateDrawFrame, 10, 1);
+    #else
+      _ReadMaxScore();
+      SetTargetFPS(8); 
+
+    while (!WindowShouldClose())
+    {
+      UpdateDrawFrame();
+    }
+    #endif
+    CloseWindow();
+
+    return 0;
+}
+
+void UpdateDrawFrame()
 {
     if (!food_present)
     {
@@ -116,27 +125,25 @@ void UpdateState()
     }
 
     // wall collision
-    if (Snake[0].x < 0 || Snake[0].x > SCREEN_SIZE - CELL_SIZE || Snake[0].y < 0 || Snake[0].y > SCREEN_SIZE - CELL_SIZE)
-        ResetState();
+    if (Snake[0].x < 0 || Snake[0].x > SCREEN_SIZE - CELL_SIZE || Snake[0].y < 0 || Snake[0].y > SCREEN_SIZE - CELL_SIZE) {
+      ResetState();
+    }
+
 
     // self collision
     for (int i = 1; i < snake_size - 1; i++)
     {
-        if (Snake[0].x == Snake[i].x && Snake[0].y == Snake[i].y)
-            ResetState();
+        if (Snake[0].x == Snake[i].x && Snake[0].y == Snake[i].y) {
+          ResetState();
+        }
     }
 
     max_score = MAX(max_score, (snake_size - 1) * 10);
-}
 
-void DrawGame()
-{
     BeginDrawing();
     ClearBackground(BLACK);
-
     if (GRID)
-        _DrawGrid();
-
+      _DrawGrid();
     for (int i = 0; i < snake_size; i++)
     {
         DrawRectangle(Snake[i].x, Snake[i].y, CELL_SIZE, CELL_SIZE, ((i == 0) ? HEAD_COLOR : TAIL_COLOR));
@@ -147,7 +154,9 @@ void DrawGame()
     DrawText(TextFormat("Score: %d", (snake_size - 1) * 10), 20, 20, 25, RED);
     DrawText(TextFormat("High-Score: %d", max_score), SCREEN_SIZE - (22 * (7 + snprintf(NULL, 0, "%ld", max_score))), 20, 25, RED);
     EndDrawing();
+
 }
+
 
 void _DrawGrid()
 {
